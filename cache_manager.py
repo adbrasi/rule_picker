@@ -104,6 +104,33 @@ def save_cache(tags: str, sort: str, posts: list[dict[str, Any]]) -> dict[str, A
     return cache_data
 
 
+def ensure_cache(tags: str, sort: str, fetch_fn) -> dict[str, Any]:
+    """Load cache; if missing, call fetch_fn() to get posts and save atomically.
+
+    Holds the per-key lock across the entire load-fetch-save sequence
+    to prevent TOCTOU races in concurrent execution.
+    """
+    key = _cache_key(tags, sort)
+    lock = _get_lock(key)
+    with lock:
+        data = load_cache(tags, sort)
+        if data is None:
+            posts = fetch_fn()
+            if not posts:
+                return None
+            data = {
+                "tags": tags,
+                "sort": sort,
+                "posts": posts,
+                "cursor": 0,
+                "seen": [],
+                "fetched_at": time.time(),
+                "total_posts": len(posts),
+            }
+            _atomic_write(_cache_path(key), data)
+        return data
+
+
 def invalidate_cache(tags: str, sort: str) -> None:
     """Delete the cache file for the given tags+sort."""
     key = _cache_key(tags, sort)

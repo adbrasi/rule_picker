@@ -218,10 +218,9 @@ class Rule34Picker:
         if refresh_cache:
             cache_manager.invalidate_cache(tags, sort_by)
 
-        cache = cache_manager.load_cache(tags, sort_by)
-        if cache is None:
+        def _fetch():
             print(f"[Rule34Picker] Fetching posts for tags='{tags}' sort='{sort_tag}' media={media_type} pages={max_pages}")
-            posts = api_client.fetch_posts(
+            return api_client.fetch_posts(
                 tags=tags,
                 sort_tag=sort_tag,
                 max_pages=max_pages,
@@ -231,12 +230,13 @@ class Rule34Picker:
                 timeout=timeout,
                 max_retries=max_retries,
             )
-            if not posts:
-                raise RuntimeError(
-                    f"No posts found for tags: {tags} (media_type={media_type})"
-                )
-            cache_manager.save_cache(tags, sort_by, posts)
-            print(f"[Rule34Picker] Cached {len(posts)} posts")
+
+        cache = cache_manager.ensure_cache(tags, sort_by, _fetch)
+        if cache is None:
+            raise RuntimeError(
+                f"No posts found for tags: {tags} (media_type={media_type})"
+            )
+        print(f"[Rule34Picker] Cache ready: {cache['total_posts']} posts")
 
         # Get next batch from cache
         batch_posts = cache_manager.get_next_batch(
@@ -266,7 +266,7 @@ class Rule34Picker:
 
         with ThreadPoolExecutor(max_workers=workers) as pool:
             futures = {pool.submit(_download_post, p): p for p in batch_posts}
-            for future in as_completed(futures, timeout=HARD_DOWNLOAD_TIMEOUT * len(futures)):
+            for future in as_completed(futures, timeout=HARD_DOWNLOAD_TIMEOUT):
                 try:
                     post_id, tensor = future.result(timeout=HARD_DOWNLOAD_TIMEOUT)
                     if tensor is not None:
