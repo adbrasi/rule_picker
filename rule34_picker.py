@@ -90,9 +90,9 @@ class Rule34Picker:
 
     CATEGORY = "image/rule34"
     FUNCTION = "pick_images"
-    RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("images",)
-    OUTPUT_IS_LIST = (True,)
+    RETURN_TYPES = ("IMAGE", "STRING",)
+    RETURN_NAMES = ("images", "tags",)
+    OUTPUT_IS_LIST = (True, True,)
     OUTPUT_NODE = False
     DESCRIPTION = (
         "Fetches images from Rule34 API with disk-based caching and parallel downloads. "
@@ -277,9 +277,11 @@ class Rule34Picker:
 
         # Maintain original order
         images: list = []
+        tags_list: list = []
         for post in batch_posts:
             if post["id"] in results:
                 images.append(results[post["id"]])
+                tags_list.append(post.get("tags", ""))
 
         if not images:
             raise RuntimeError(
@@ -290,4 +292,4 @@ class Rule34Picker:
         ids = [p["id"] for p in batch_posts if p["id"] in results]
         print(f"[Rule34Picker] Delivered {len(images)} images (IDs: {ids})")
 
-        return (images,)
+        return (images, tags_list,)
