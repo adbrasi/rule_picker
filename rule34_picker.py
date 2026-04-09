@@ -170,6 +170,20 @@ class Rule34Picker:
                     "step": 10,
                     "tooltip": "Maximum file size in MB for each downloaded image/video.",
                 }),
+                "max_width": ("INT", {
+                    "default": 4096,
+                    "min": 0,
+                    "max": 16384,
+                    "step": 64,
+                    "tooltip": "Max image width in pixels. Posts wider than this are skipped. 0 = no limit.",
+                }),
+                "max_height": ("INT", {
+                    "default": 4096,
+                    "min": 0,
+                    "max": 16384,
+                    "step": 64,
+                    "tooltip": "Max image height in pixels. Posts taller than this are skipped. 0 = no limit.",
+                }),
             },
             "optional": {
                 "api_key": ("STRING", {
@@ -187,11 +201,13 @@ class Rule34Picker:
     def IS_CHANGED(cls, tags, sort_by, media_type, batch_size, seed,
                    never_repeat, max_pages, use_full_resolution, refresh_cache,
                    reset_history, timeout, max_retries, max_file_size_mb,
+                   max_width, max_height,
                    api_key="", user_id=""):
         """Hash all meaningful inputs so any change triggers re-execution."""
         key = (
             f"{tags}|{sort_by}|{media_type}|{batch_size}|{seed}|{never_repeat}"
             f"|{max_pages}|{use_full_resolution}|{refresh_cache}|{reset_history}"
+            f"|{max_width}|{max_height}"
         )
         return hashlib.md5(key.encode()).hexdigest()
 
@@ -210,6 +226,8 @@ class Rule34Picker:
         timeout: int,
         max_retries: int,
         max_file_size_mb: int,
+        max_width: int,
+        max_height: int,
         api_key: str = "",
         user_id: str = "",
     ) -> tuple:
@@ -238,6 +256,8 @@ class Rule34Picker:
                 media_filter=media_type,
                 timeout=timeout,
                 max_retries=max_retries,
+                max_width=max_width,
+                max_height=max_height,
             )
 
         cache = cache_manager.ensure_cache(tags, sort_by, _fetch)

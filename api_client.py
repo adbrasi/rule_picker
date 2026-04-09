@@ -135,11 +135,13 @@ def fetch_posts(
     media_filter: str = "images",
     timeout: int = DEFAULT_TIMEOUT,
     max_retries: int = DEFAULT_MAX_RETRIES,
+    max_width: int = 0,
+    max_height: int = 0,
 ) -> list[dict[str, Any]]:
     """Fetch posts from Rule34 API with pagination.
 
-    Returns a list of post dicts filtered by media_filter ("images", "videos", "all").
-    Each post dict contains: id, file_url, sample_url, score, tags, rating.
+    Returns a list of post dicts filtered by media_filter and resolution limits.
+    Each post dict contains: id, file_url, sample_url, score, tags, rating, width, height.
     """
     all_posts: list[dict[str, Any]] = []
 
@@ -163,6 +165,14 @@ def fetch_posts(
             if not _matches_media_filter(primary_url, media_filter):
                 continue
 
+            # Filter by resolution limits
+            w = p.get("width", 0) or 0
+            h = p.get("height", 0) or 0
+            if max_width > 0 and w > max_width:
+                continue
+            if max_height > 0 and h > max_height:
+                continue
+
             all_posts.append({
                 "id": post_id,
                 "file_url": file_url,
@@ -170,6 +180,8 @@ def fetch_posts(
                 "score": p.get("score", 0),
                 "tags": p.get("tags", ""),
                 "rating": p.get("rating", ""),
+                "width": w,
+                "height": h,
             })
 
         # If we got less than the limit, there are no more pages
