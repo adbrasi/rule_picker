@@ -1,4 +1,4 @@
-"""ComfyUI-Rule34-Picker — Fetch images from Rule34 API with smart caching."""
+"""Rule34 Picker — Fetch images from Rule34 API with smart caching."""
 
 from .rule34_picker import Rule34Picker
 
