@@ -141,6 +141,18 @@ def invalidate_cache(tags: str, sort: str) -> None:
             os.remove(path)
 
 
+def reset_history(tags: str, sort: str) -> None:
+    """Reset cursor and seen-history without deleting the cached posts."""
+    key = _cache_key(tags, sort)
+    lock = _get_lock(key)
+    with lock:
+        cache = load_cache(tags, sort)
+        if cache is not None:
+            cache["cursor"] = 0
+            cache["seen"] = []
+            _atomic_write(_cache_path(key), cache)
+
+
 def get_next_batch(
     tags: str,
     sort: str,

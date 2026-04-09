@@ -145,6 +145,10 @@ class Rule34Picker:
                     "default": False,
                     "tooltip": "Force re-fetch from API, ignoring existing cache.",
                 }),
+                "reset_history": ("BOOLEAN", {
+                    "default": False,
+                    "tooltip": "Reset cursor and seen-history. Starts delivering images from the beginning again.",
+                }),
                 "timeout": ("INT", {
                     "default": 30,
                     "min": 5,
@@ -182,12 +186,12 @@ class Rule34Picker:
     @classmethod
     def IS_CHANGED(cls, tags, sort_by, media_type, batch_size, seed,
                    never_repeat, max_pages, use_full_resolution, refresh_cache,
-                   timeout, max_retries, max_file_size_mb,
+                   reset_history, timeout, max_retries, max_file_size_mb,
                    api_key="", user_id=""):
         """Hash all meaningful inputs so any change triggers re-execution."""
         key = (
             f"{tags}|{sort_by}|{media_type}|{batch_size}|{seed}|{never_repeat}"
-            f"|{max_pages}|{use_full_resolution}|{refresh_cache}"
+            f"|{max_pages}|{use_full_resolution}|{refresh_cache}|{reset_history}"
         )
         return hashlib.md5(key.encode()).hexdigest()
 
@@ -202,6 +206,7 @@ class Rule34Picker:
         max_pages: int,
         use_full_resolution: bool,
         refresh_cache: bool,
+        reset_history: bool,
         timeout: int,
         max_retries: int,
         max_file_size_mb: int,
@@ -213,6 +218,10 @@ class Rule34Picker:
             raise ValueError("Tags field cannot be empty.")
 
         sort_tag = f"sort:{sort_by}"
+
+        # Reset history (cursor + seen) if requested
+        if reset_history:
+            cache_manager.reset_history(tags, sort_by)
 
         # Check cache or fetch from API
         if refresh_cache:
@@ -281,7 +290,9 @@ class Rule34Picker:
         for post in batch_posts:
             if post["id"] in results:
                 images.append(results[post["id"]])
-                tags_list.append(post.get("tags", ""))
+                # Convert space-separated tags to comma-separated for prompt use
+                raw_tags = post.get("tags", "")
+                tags_list.append(", ".join(raw_tags.split()))
 
         if not images:
             raise RuntimeError(
